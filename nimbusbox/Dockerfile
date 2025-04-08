@@ -1,4 +1,4 @@
-FROM node:18
+FROM node:20
 
 WORKDIR /app
 
@@ -13,11 +13,14 @@ RUN apt-get update && apt-get install -y \
 # Copy package files
 COPY package*.json ./
 
-# Debug: Show package.json contents
-RUN cat package.json
+# Debug: Show package.json contents and Node.js version
+RUN echo "Node.js version:" && node --version && \
+    echo "npm version:" && npm --version && \
+    echo "Package.json contents:" && cat package.json
 
-# Install dependencies with verbose output
-RUN npm install --verbose
+# Install dependencies with verbose output and force clean install
+RUN npm cache clean --force && \
+    npm install --verbose --legacy-peer-deps
 
 # Copy the rest of the application
 COPY . .
