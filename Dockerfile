@@ -82,21 +82,23 @@ RUN echo "=== Production Stage Initial State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la
 
-# Copy package files first
-COPY --from=builder /app/package.json /app/package-lock.json ./
+# Copy package files and node_modules from builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
-# Install dependencies in production stage
-RUN echo "=== Installing Dependencies in Production ===" && \
-    npm install --production --legacy-peer-deps
+# Debug: Show files after copying
+RUN echo "=== After Copying Package Files ===" && \
+    echo "Working directory:" && pwd && \
+    echo "Directory contents:" && ls -la && \
+    echo "Package.json exists?" && ls -l package.json && \
+    echo "node_modules exists?" && ls -ld node_modules
 
 # Copy the rest of the application
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/index.html ./
 COPY --from=builder /app/vite.config.ts ./
-COPY --from=builder /app/tsconfig.json ./
-COPY --from=builder /app/tsconfig.node.json ./
-COPY --from=builder /app/tsconfig.app.json ./
+COPY --from=builder /app/tsconfig*.json ./
 
 # Debug: Show production stage final state
 RUN echo "=== Production Stage Final State ===" && \
