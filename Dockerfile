@@ -51,16 +51,6 @@ RUN echo "=== Installing Dependencies ===" && \
      ls -la && \
      exit 1)
 
-# Only check node_modules if npm install succeeded
-RUN if [ -d "node_modules" ]; then \
-    echo "=== After Dependency Installation ===" && \
-    echo "node_modules directory exists?" && ls -ld node_modules && \
-    echo "node_modules/.bin contents:" && ls -la node_modules/.bin; \
-    else \
-    echo "=== node_modules directory not found ===" && \
-    echo "Directory contents:" && ls -la; \
-    fi
-
 # Copy the rest of the application
 COPY . .
 
@@ -81,15 +71,24 @@ RUN echo "=== Production Stage Initial State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la
 
-# Copy from builder stage
-COPY --from=builder /app .
+# Copy everything from builder stage
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/index.html ./
+COPY --from=builder /app/vite.config.ts ./
+COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/tsconfig.node.json ./
+COPY --from=builder /app/tsconfig.app.json ./
 
 # Debug: Show production stage final state
 RUN echo "=== Production Stage Final State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la && \
-    if [ -d "node_modules" ]; then echo "node_modules exists?" && ls -ld node_modules; fi && \
-    echo "package.json exists?" && ls -l package.json
+    echo "package.json exists?" && ls -l package.json && \
+    echo "node_modules exists?" && ls -ld node_modules && \
+    echo "src directory exists?" && ls -ld src
 
 # Expose port
 EXPOSE 5173
