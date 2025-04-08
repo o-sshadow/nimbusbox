@@ -43,13 +43,15 @@ RUN echo "=== After Copying Package Files ===" && \
 RUN echo "=== Installing Dependencies ===" && \
     echo "npm config list:" && npm config list && \
     echo "npm cache verify:" && npm cache verify && \
-    npm install --verbose 2>&1 | tee npm-install.log || \
+    npm install --verbose --legacy-peer-deps 2>&1 | tee npm-install.log || \
     (echo "=== npm install failed ===" && \
      echo "npm-install.log contents:" && \
      cat npm-install.log && \
      echo "=== Directory contents after failure ===" && \
      ls -la && \
-     exit 1)
+     exit 1) && \
+    echo "=== Waiting for processes to complete ===" && \
+    sleep 10
 
 # Verify node_modules exists
 RUN echo "=== Verifying node_modules ===" && \
@@ -68,7 +70,7 @@ RUN echo "=== Final Directory State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la && \
     echo "src directory contents:" && ls -la src && \
-    echo "node_modules size:" && du -sh node_modules
+    if [ -d "node_modules" ]; then echo "node_modules size:" && du -sh node_modules; fi
 
 # Production stage
 FROM node:20-alpine
@@ -85,7 +87,7 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 
 # Install dependencies in production stage
 RUN echo "=== Installing Dependencies in Production ===" && \
-    npm install --production
+    npm install --production --legacy-peer-deps
 
 # Copy the rest of the application
 COPY --from=builder /app/src ./src
