@@ -24,11 +24,11 @@ RUN echo "Current directory:" && pwd && \
 RUN echo "Attempting npm ci..." && \
     npm ci --verbose 2>&1 | tee npm-ci.log || (echo "npm ci failed. Log content:" && cat npm-ci.log && exit 1)
 
-# Install Vite globally to ensure it's available
-RUN npm install -g vite
-
 # Bundle app source
 COPY . .
+
+# Install dependencies again after copying all files
+RUN npm install
 
 # Expose port
 EXPOSE 5173
