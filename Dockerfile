@@ -39,7 +39,7 @@ RUN echo "=== After Copying Package Files ===" && \
     echo "Package-lock.json exists?" && ls -l package-lock.json* && \
     echo "File permissions:" && ls -l package.json package-lock.json*
 
-# Install dependencies with verbose output
+# Install dependencies with verbose output and cleanup
 RUN echo "=== Installing Dependencies ===" && \
     echo "npm config list:" && npm config list && \
     echo "npm cache verify:" && npm cache verify && \
@@ -50,6 +50,11 @@ RUN echo "=== Installing Dependencies ===" && \
      echo "=== Directory contents after failure ===" && \
      ls -la && \
      exit 1) && \
+    echo "=== Cleaning up npm cache ===" && \
+    npm cache clean --force && \
+    echo "=== Removing unnecessary files ===" && \
+    find node_modules -type d -name "test" -o -name "tests" -o -name "docs" -o -name "examples" | xargs rm -rf && \
+    find node_modules -type f -name "*.md" -o -name "*.map" -o -name "*.ts" | xargs rm -f && \
     echo "=== Waiting for processes to complete ===" && \
     sleep 10
 
@@ -60,7 +65,8 @@ RUN echo "=== Verifying node_modules ===" && \
         echo "Directory contents:" && ls -la && \
         exit 1; \
     fi && \
-    echo "node_modules exists:" && ls -ld node_modules
+    echo "node_modules exists:" && ls -ld node_modules && \
+    echo "node_modules size after cleanup:" && du -sh node_modules
 
 # Copy the rest of the application
 COPY . .
@@ -107,6 +113,13 @@ RUN echo "=== Production Stage Final State ===" && \
     echo "package.json exists?" && ls -l package.json && \
     echo "node_modules exists?" && ls -ld node_modules && \
     echo "src directory exists?" && ls -ld src
+
+# Clean up in production stage
+RUN echo "=== Cleaning up in production stage ===" && \
+    npm cache clean --force && \
+    rm -rf /tmp/* && \
+    echo "=== Final node_modules size ===" && \
+    du -sh node_modules
 
 # Expose port
 EXPOSE 5173
