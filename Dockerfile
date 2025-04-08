@@ -1,42 +1,28 @@
-FROM node:20
+FROM node:20-slim
 
 WORKDIR /app
 
-# Install necessary build tools and dependencies
+# Install only essential build tools
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user and group
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 --ingroup nodejs --shell /bin/false nodejs
+# Copy package files
+COPY package.json ./
 
-# Copy package files and change ownership
-COPY package.json package-lock.json* ./
-RUN chown -R nodejs:nodejs /app
-
-# Switch to the non-root user
-USER nodejs
-
-# Debug: Show package.json contents and Node.js version as non-root user
+# Debug: Show environment and versions
 RUN echo "Node.js version:" && node --version && \
     echo "npm version:" && npm --version && \
-    echo "Package.json contents:" && cat package.json && \
-    echo "Package-lock.json exists?" && ls -l package-lock.json*
+    echo "Current directory:" && pwd && \
+    echo "Files in current directory:" && ls -la
 
-# Install dependencies using npm ci (more reliable for CI/Docker)
-# Clean cache first just in case
-RUN npm cache clean --force && \
-    npm ci --verbose
+# Install dependencies with detailed output
+RUN npm install --verbose 2>&1 | tee npm-install.log || (cat npm-install.log && exit 1)
 
-# Copy the rest of the application (as root temporarily for permissions)
-USER root
+# Copy the rest of the application
 COPY . .
-RUN chown -R nodejs:nodejs /app
-USER nodejs
 
 # Expose the development server port
 EXPOSE 5173
