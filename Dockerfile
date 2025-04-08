@@ -39,34 +39,16 @@ RUN echo "=== After Copying Package Files ===" && \
     echo "Package-lock.json exists?" && ls -l package-lock.json* && \
     echo "File permissions:" && ls -l package.json package-lock.json*
 
-# Install dependencies with verbose output and cleanup
+# Install dependencies with cleanup
 RUN echo "=== Installing Dependencies ===" && \
-    echo "npm config list:" && npm config list && \
-    echo "npm cache verify:" && npm cache verify && \
-    npm install --verbose --legacy-peer-deps 2>&1 | tee npm-install.log || \
-    (echo "=== npm install failed ===" && \
-     echo "npm-install.log contents:" && \
-     cat npm-install.log && \
-     echo "=== Directory contents after failure ===" && \
-     ls -la && \
-     exit 1) && \
+    npm ci --verbose --legacy-peer-deps && \
     echo "=== Cleaning up npm cache ===" && \
     npm cache clean --force && \
     echo "=== Removing unnecessary files ===" && \
-    find node_modules -type d -name "test" -o -name "tests" -o -name "docs" -o -name "examples" | xargs rm -rf && \
-    find node_modules -type f -name "*.md" -o -name "*.map" -o -name "*.ts" | xargs rm -f && \
-    echo "=== Waiting for processes to complete ===" && \
-    sleep 10
-
-# Verify node_modules exists
-RUN echo "=== Verifying node_modules ===" && \
-    if [ ! -d "node_modules" ]; then \
-        echo "node_modules directory not found!" && \
-        echo "Directory contents:" && ls -la && \
-        exit 1; \
-    fi && \
-    echo "node_modules exists:" && ls -ld node_modules && \
-    echo "node_modules size after cleanup:" && du -sh node_modules
+    find node_modules -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "examples" -o -name "benchmark" -o -name "benchmarks" \) -exec rm -rf {} + && \
+    find node_modules -type f \( -name "*.md" -o -name "*.map" -o -name "*.ts" -o -name "*.flow" -o -name "*.test.js" -o -name "*.spec.js" \) -delete && \
+    echo "=== node_modules size after cleanup ===" && \
+    du -sh node_modules
 
 # Copy the rest of the application
 COPY . .
@@ -88,9 +70,14 @@ RUN echo "=== Production Stage Initial State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la
 
-# Copy package files and node_modules from builder
+# Copy only necessary files from builder
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/index.html ./
+COPY --from=builder /app/vite.config.ts ./
+COPY --from=builder /app/tsconfig*.json ./
 
 # Debug: Show files after copying
 RUN echo "=== After Copying Package Files ===" && \
@@ -98,13 +85,6 @@ RUN echo "=== After Copying Package Files ===" && \
     echo "Directory contents:" && ls -la && \
     echo "Package.json exists?" && ls -l package.json && \
     echo "node_modules exists?" && ls -ld node_modules
-
-# Copy the rest of the application
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/index.html ./
-COPY --from=builder /app/vite.config.ts ./
-COPY --from=builder /app/tsconfig*.json ./
 
 # Debug: Show production stage final state
 RUN echo "=== Production Stage Final State ===" && \
@@ -118,6 +98,7 @@ RUN echo "=== Production Stage Final State ===" && \
 RUN echo "=== Cleaning up in production stage ===" && \
     npm cache clean --force && \
     rm -rf /tmp/* && \
+    rm -rf /var/cache/apk/* && \
     echo "=== Final node_modules size ===" && \
     du -sh node_modules
 
