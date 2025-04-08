@@ -51,6 +51,15 @@ RUN echo "=== Installing Dependencies ===" && \
      ls -la && \
      exit 1)
 
+# Verify node_modules exists
+RUN echo "=== Verifying node_modules ===" && \
+    if [ ! -d "node_modules" ]; then \
+        echo "node_modules directory not found!" && \
+        echo "Directory contents:" && ls -la && \
+        exit 1; \
+    fi && \
+    echo "node_modules exists:" && ls -ld node_modules
+
 # Copy the rest of the application
 COPY . .
 
@@ -59,7 +68,7 @@ RUN echo "=== Final Directory State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la && \
     echo "src directory contents:" && ls -la src && \
-    if [ -d "node_modules" ]; then echo "node_modules size:" && du -sh node_modules; fi
+    echo "node_modules size:" && du -sh node_modules
 
 # Production stage
 FROM node:20-alpine
@@ -71,9 +80,14 @@ RUN echo "=== Production Stage Initial State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la
 
-# Copy everything from builder stage
+# Copy package files first
 COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY --from=builder /app/node_modules ./node_modules
+
+# Install dependencies in production stage
+RUN echo "=== Installing Dependencies in Production ===" && \
+    npm install --production
+
+# Copy the rest of the application
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/index.html ./
