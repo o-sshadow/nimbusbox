@@ -10,16 +10,19 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Install app dependencies
-COPY package*.json ./
+# Copy package files (ensure package-lock.json is included)
+COPY package.json package-lock.json* ./
 
-# Show debug information
+# Show debug information - Verify files are copied
 RUN echo "Current directory:" && pwd && \
     echo "Files in directory:" && ls -la && \
-    echo "Package.json contents:" && cat package.json
+    echo "Package.json contents:" && cat package.json && \
+    echo "Package-lock.json exists?" && ls -l package-lock.json*
 
-# Install dependencies with verbose output
-RUN npm install --verbose
+# Install dependencies using npm ci (more reliable for CI/Docker)
+# Use verbose logging and redirect stderr to stdout for capture
+RUN echo "Attempting npm ci..." && \
+    npm ci --verbose 2>&1 | tee npm-ci.log || (echo "npm ci failed. Log content:" && cat npm-ci.log && exit 1)
 
 # Bundle app source
 COPY . .
