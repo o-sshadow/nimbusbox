@@ -1,8 +1,11 @@
 # Use a compatible and common Node.js LTS version
-FROM node:20
+FROM node:20-alpine
 
 # Set the working directory
 WORKDIR /app
+
+# Install essential build tools
+RUN apk add --no-cache python3 make g++
 
 # Copy only package files first
 COPY package.json package-lock.json ./
