@@ -51,10 +51,15 @@ RUN echo "=== Installing Dependencies ===" && \
      ls -la && \
      exit 1)
 
-# Debug: Show node_modules after installation
-RUN echo "=== After Dependency Installation ===" && \
+# Only check node_modules if npm install succeeded
+RUN if [ -d "node_modules" ]; then \
+    echo "=== After Dependency Installation ===" && \
     echo "node_modules directory exists?" && ls -ld node_modules && \
-    echo "node_modules/.bin contents:" && ls -la node_modules/.bin
+    echo "node_modules/.bin contents:" && ls -la node_modules/.bin; \
+    else \
+    echo "=== node_modules directory not found ===" && \
+    echo "Directory contents:" && ls -la; \
+    fi
 
 # Copy the rest of the application
 COPY . .
@@ -64,7 +69,7 @@ RUN echo "=== Final Directory State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la && \
     echo "src directory contents:" && ls -la src && \
-    echo "node_modules size:" && du -sh node_modules
+    if [ -d "node_modules" ]; then echo "node_modules size:" && du -sh node_modules; fi
 
 # Production stage
 FROM node:20-alpine
@@ -83,7 +88,7 @@ COPY --from=builder /app .
 RUN echo "=== Production Stage Final State ===" && \
     echo "Working directory:" && pwd && \
     echo "Directory contents:" && ls -la && \
-    echo "node_modules exists?" && ls -ld node_modules && \
+    if [ -d "node_modules" ]; then echo "node_modules exists?" && ls -ld node_modules; fi && \
     echo "package.json exists?" && ls -l package.json
 
 # Expose port
