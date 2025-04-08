@@ -9,20 +9,24 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
-COPY package.json ./
+# Debug: Show initial directory contents
+RUN echo "Initial directory contents:" && ls -la
 
-# Debug: Show environment and versions
-RUN echo "Node.js version:" && node --version && \
-    echo "npm version:" && npm --version && \
-    echo "Current directory:" && pwd && \
-    echo "Files in current directory:" && ls -la
+# Copy package files first
+COPY package.json package-lock.json ./
+
+# Debug: Show files after copying package.json
+RUN echo "Files after copying package.json:" && ls -la && \
+    echo "Package.json contents:" && cat package.json
 
 # Install dependencies with detailed output
 RUN npm install --verbose 2>&1 | tee npm-install.log || (cat npm-install.log && exit 1)
 
 # Copy the rest of the application
 COPY . .
+
+# Debug: Show final directory contents
+RUN echo "Final directory contents:" && ls -la
 
 # Expose the development server port
 EXPOSE 5173
