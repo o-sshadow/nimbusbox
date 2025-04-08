@@ -10,8 +10,8 @@ RUN apk add --no-cache python3 make g++
 # Copy only package files first
 COPY package.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with verbose output
+RUN npm install --verbose
 
 # Copy the rest of the application
 COPY . .
