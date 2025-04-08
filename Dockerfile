@@ -39,16 +39,31 @@ RUN echo "=== After Copying Package Files ===" && \
     echo "Package-lock.json exists?" && ls -l package-lock.json* && \
     echo "File permissions:" && ls -l package.json package-lock.json*
 
-# Install dependencies with cleanup
+# Install dependencies with better error handling
 RUN echo "=== Installing Dependencies ===" && \
-    npm ci --verbose --legacy-peer-deps && \
-    echo "=== Cleaning up npm cache ===" && \
+    npm cache verify && \
+    npm install --verbose --legacy-peer-deps || \
+    (echo "=== npm install failed, trying with --force ===" && \
+     npm install --verbose --legacy-peer-deps --force) || \
+    (echo "=== Installation failed, showing error ===" && \
+     cat npm-debug.log 2>/dev/null || true && \
+     exit 1)
+
+# Clean up and remove unnecessary files
+RUN echo "=== Cleaning up npm cache ===" && \
     npm cache clean --force && \
     echo "=== Removing unnecessary files ===" && \
-    find node_modules -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "examples" -o -name "benchmark" -o -name "benchmarks" \) -exec rm -rf {} + && \
-    find node_modules -type f \( -name "*.md" -o -name "*.map" -o -name "*.ts" -o -name "*.flow" -o -name "*.test.js" -o -name "*.spec.js" \) -delete && \
+    (find node_modules -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "examples" -o -name "benchmark" -o -name "benchmarks" \) -exec rm -rf {} + || true) && \
+    (find node_modules -type f \( -name "*.md" -o -name "*.map" -o -name "*.ts" -o -name "*.flow" -o -name "*.test.js" -o -name "*.spec.js" \) -delete || true) && \
     echo "=== node_modules size after cleanup ===" && \
     du -sh node_modules
+
+# Verify node_modules exists
+RUN if [ ! -d "node_modules" ]; then \
+        echo "node_modules directory not found!" && \
+        echo "Directory contents:" && ls -la && \
+        exit 1; \
+    fi
 
 # Copy the rest of the application
 COPY . .
